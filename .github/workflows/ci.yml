@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ll84
+          POSTGRES_PASSWORD: ll84
+          POSTGRES_DB: ll84_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ll84 -d ll84_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://ll84:ll84@localhost:5432/ll84_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e ".[postgres,dev]"
+      - run: ruff check src tests glue
+      - run: ruff format --check src tests glue
+      - run: pytest -v
+      - name: Build the Glue wheel
+        run: python -m pip wheel . --no-deps -w dist && ls dist

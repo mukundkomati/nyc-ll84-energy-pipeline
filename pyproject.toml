@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ll84-pipeline"
+version = "0.1.0"
+description = "NYC Local Law 84 building energy benchmarking pipeline: S3 -> AWS Glue (pandas) -> Athena + Postgres, with year-over-year EUI anomaly flagging."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+# Kept deliberately loose so the wheel installs cleanly on AWS Glue 5.0,
+# which already ships pandas, pyarrow and boto3.
+dependencies = [
+    "pandas>=1.5",
+    "numpy>=1.22",
+    "pyarrow>=10",
+    "boto3>=1.26",
+    "requests>=2.28",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg2-binary>=2.9"]
+dev = ["pytest>=7", "ruff>=0.4", "build>=1.0"]
+
+[project.scripts]
+ll84 = "ll84.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ll84 = ["sql/postgres/*.sql", "sql/athena/ddl/*.sql", "sql/athena/queries/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "UP006", "UP007", "UP035", "UP045"]  # keep typing.List etc. for Glue's Python 3.9

@@ -1,0 +1,26 @@
+# Secrets / local config
+.env
+
+# Data and logs (raw data is re-downloadable; never commit it)
+data/
+logs/
+*.csv
+*.parquet
+!tests/fixtures/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+.Rhistory

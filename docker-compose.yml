@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ll84-postgres
+    environment:
+      POSTGRES_USER: ll84
+      POSTGRES_PASSWORD: ll84
+      POSTGRES_DB: ll84
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ll84 -d ll84"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
