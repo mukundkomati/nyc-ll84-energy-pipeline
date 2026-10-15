@@ -21,15 +21,39 @@ range year over year, logging each one into a review queue.
 
 ```mermaid
 flowchart LR
-    A[NYC Open Data<br/>SODA API] -->|ll84 extract| B[(S3 raw<br/>CSV by ingest_date)]
-    B --> C[AWS Glue 5.0 job<br/>pandas: clean, model, flag]
-    C --> D[(S3 curated<br/>Parquet by report_year)]
-    D --> E[Athena<br/>external tables]
-    D -->|ll84 load-postgres| F[(Postgres<br/>ll84 schema)]
-    C -->|EUI flags| G[eui_flags parquet<br/>+ CloudWatch log]
-    G --> F
-    F --> H[eui_review_log<br/>review queue]
+    A[NYC Open Data<br/>SODA API] -->|Step 1: extract| B[(S3 raw<br/>CSV by ingest date)]
+    B -->|Step 2: Glue job<br/>clean, model, flag| D
+
+    subgraph D [S3 curated - Parquet]
+        direction TB
+        D1[properties]
+        D2[meters]
+        D3[consumption]
+        D4[annual_metrics]
+        D5[eui_flags]
+    end
+
+    D -->|Step 3a: query in place| E[Athena]
+    D -->|Step 3b: load-postgres| F
+
+    subgraph F [Postgres]
+        direction TB
+        F1[properties, meters,<br/>consumption, annual_metrics]
+        F2[eui_review_log<br/>review queue]
+    end
 ```
+
+1. **Extract** downloads the dataset and stores the untouched CSV in `raw/`.
+2. **The Glue job** cleans and models it, runs the year-over-year EUI flagging, and writes
+   all five outputs, flags included, to `curated/`.
+3. Two consumers read the same curated data:
+   - **Athena** queries the Parquet files where they sit, for cheap ad-hoc analysis.
+   - **`load-postgres`** copies them into Postgres in one step. The four model tables are
+     upserted; `eui_flags` is merged into `eui_review_log` so reviewers' status and notes
+     survive re-runs.
+
+The Glue job's log output, including one line per flagged building, goes to CloudWatch for
+monitoring only; it is not a data source for anything downstream.
 
 The same transformation code runs locally (`python -m ll84 transform`) and in Glue, so you
 can develop and test without an AWS account and deploy the identical logic.
